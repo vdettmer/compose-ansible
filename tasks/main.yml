@@ -1,0 +1,59 @@
+---
+# tasks file for odroid_compose
+- name: Stop all services
+  community.docker.docker_compose_v2:
+    project_src: /root
+    state: absent
+  register: output
+  async: 600
+  become: true
+  environment:
+    DOCKER_CLIENT_TIMEOUT: 600
+    COMPOSE_HTTP_TIMEOUT: 600
+
+- ansible.builtin.debug:
+    var: output
+
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    upgrade: yes
+    update_cache: yes
+    cache_valid_time: 86400 #One day
+
+- name: Run `docker-compose up` again
+  community.docker.docker_compose_v2:
+    project_src: /root
+    build: never
+    state: present
+  register: output
+  async: 600
+  become: true
+  environment:
+    DOCKER_CLIENT_TIMEOUT: 600
+    COMPOSE_HTTP_TIMEOUT: 600
+
+- ansible.builtin.debug:
+    var: output
+
+- name: Prune everything
+  community.docker.docker_prune:
+    containers: true
+    images: true
+    networks: true
+    volumes: true
+    builder_cache: true
+  async: 2400
+  become: true
+  environment:
+    DOCKER_CLIENT_TIMEOUT: 2400
+    COMPOSE_HTTP_TIMEOUT: 2400
+  ignore_errors: true
+
+- name: get uptime of host
+  ansible.builtin.command: uptime
+  register: uptime
+  changed_when: false
+
+- ansible.builtin.debug:
+    var: uptime.stdout
